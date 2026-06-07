@@ -41,15 +41,15 @@ Expected local assets (not in this repo): `./gpt2-medium-offline` (base model),
 
 **BC** — masked next-token cross-entropy (answer tokens weighted by $w=$ `non_action_weight`, default $0$):
 
-$$\mathcal{L}_{\text{BC}}=-\frac{\sum_t m_t\,[a_t+(1-a_t)\,w]\,\log\pi_\theta(x_{t+1}\mid x_{\le t})}{\sum_t m_t}$$
+$$\mathcal{L}_{\text{BC}}=-\frac{\sum_t m_t [a_t+(1-a_t) w] \log\pi_\theta(x_{t+1}\mid x_{\le t})}{\sum_t m_t}$$
 
-**MC** — Q-regression onto reward-to-go + CQL anchor; decoded with $\ell=\ell_\pi+\beta\,Q$ ($\beta=16$):
+**MC** — Q-regression onto reward-to-go + CQL anchor; decoded with $\ell=\ell_\pi+\beta Q$ ($\beta=16$):
 
-$$\mathcal{L}_{\text{MC}}=\frac{1}{N}\sum_t m_t\Big[\tfrac12\big(Q_\phi(s_t,a_t)-\mathrm{sg}[R_t]\big)^2-\lambda_{\text{CQL}}\,\log\pi_\theta(a_t\mid s_t)\Big],\qquad R_t=\sum_{k\ge t}\gamma^{k-t}r_k$$
+$$\mathcal{L}_{\text{MC}}=\frac{1}{N}\sum_t m_t\Big[\tfrac12\big(Q_\phi(s_t,a_t)-\mathrm{sg}[R_t]\big)^2-\lambda_{\text{CQL}} \log\pi_\theta(a_t\mid s_t)\Big],\qquad R_t=\sum_{k\ge t}\gamma^{k-t}r_k$$
 
 **PPO** — clipped policy + clipped value, with the KL folded into the reward before GAE:
 
-$$\mathcal{L}_{\text{PPO}}=\frac{1}{N}\sum_t m_t\Big[\max\!\big(-A_t\rho_t,\,-A_t\,\mathrm{clip}(\rho_t,1\!-\!\epsilon,1\!+\!\epsilon)\big)+\tfrac{c_v}{2}\max\!\big((V_\psi-\hat R_t)^2,(V^{\text{clip}}-\hat R_t)^2\big)\Big]$$
+$$\mathcal{L}_{\text{PPO}}=\frac{1}{N}\sum_t m_t\Big[\max\big(-A_t\rho_t, -A_t \mathrm{clip}(\rho_t,1-\epsilon,1+\epsilon)\big)+\tfrac{c_v}{2}\max\big((V_\psi-\hat R_t)^2,(V^{\text{clip}}-\hat R_t)^2\big)\Big]$$
 
 $$\rho_t=\frac{\pi_\theta(a_t\mid s_t)}{\pi_{\text{old}}(a_t\mid s_t)}$$
 
