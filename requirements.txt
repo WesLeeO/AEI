@@ -1,0 +1,14 @@
+# Core deep learning stack
+torch>=2.1
+numpy>=1.24
+
+# HuggingFace ecosystem (policy model, oracle, tokenizers)
+transformers>=4.40
+peft>=0.10          # LoRA fine-tuning for GPT-2 / SFT adapters
+accelerate>=0.27    # device placement / generation helpers
+trl>=0.8            # only needed if you swap the hand-rolled PPO for trl.PPOTrainer
+sentencepiece       # tokenizer backend for the Phi-3 oracle
+
+# Training utilities
+tqdm>=4.65
+wandb>=0.16         # experiment logging (optional; guarded by wandb.run checks)

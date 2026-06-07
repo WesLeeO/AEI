@@ -13,3 +13,7 @@ mc/fine_tuned_gpt2_medium_mc_lora/
 bc/fine_tuned_gpt2_medium_lora/
 bc/fine_tuned_gpt2_medium_lora-2/
 bc/new_training.json
+LMRL-Gym/
+.DS_Store
+eval.json
+!common/__init__.py
