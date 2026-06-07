@@ -84,8 +84,8 @@ def make_mc_generate(model_q: GPT2WithQHead, tokenizer, device, beta: float,
 # ---------------------------------------------------------------------------------- train
 
 
-def load_model(cfg: MCConfig, tokenizer):
-    policy = load_policy(cfg.base_model_path, cfg.sft_adapter_path)
+def load_model(cfg: MCConfig, tokenizer, trainable: bool = False):
+    policy = load_policy(cfg.base_model_path, cfg.sft_adapter_path, trainable=trainable)
     return GPT2WithQHead(policy, tokenizer)
 
 
@@ -99,13 +99,16 @@ def train(cfg: MCConfig):
     loader = DataLoader(build_mc_dataset(convos, tokenizer, cfg),
                         batch_size=cfg.batch_size, shuffle=True)
 
-    model = load_model(cfg, tokenizer).to(device)
-    # freeze the policy; train only the Q head (offline RL on a fixed pi_beta)
-    for p in model.policy.parameters():
-        p.requires_grad = False
-    model.q_head.train()
+    # Faithful MC: train BOTH the LM LoRA params (theta) and the Q head (phi), so the
+    # CQL cross-entropy term actively keeps the LM anchored to the data distribution.
+    # (The base weights stay frozen; only LoRA + Q head update.)
+    model = load_model(cfg, tokenizer, trainable=True).to(device)
+    model.train()
 
-    optim = Adam(model.q_head.parameters(), lr=cfg.lr)
+    optim = Adam([
+        {"params": model.policy_trainable_parameters(), "lr": cfg.lr},   # theta (LoRA)
+        {"params": model.q_head.parameters(), "lr": cfg.lr},             # phi (Q head)
+    ])
     total_steps = len(loader) * cfg.epochs
     sched = get_linear_schedule_with_warmup(optim, int(0.05 * total_steps), total_steps)
 
@@ -126,16 +129,20 @@ def train(cfg: MCConfig):
                       f"| q {logs['q_loss']:.4f} | cql {logs['cql_loss']:.4f}")
 
     os.makedirs(os.path.dirname(cfg.q_function_out), exist_ok=True)
-    torch.save(model.q_head.state_dict(), cfg.q_function_out)
-    print(f"Saved Q head to {cfg.q_function_out}")
+    torch.save(model.q_head.state_dict(), cfg.q_function_out)          # phi
+    model.policy.save_pretrained(cfg.mc_adapter_out)                   # theta (fine-tuned LoRA)
+    tokenizer.save_pretrained(cfg.mc_adapter_out)
+    print(f"Saved Q head to {cfg.q_function_out} and MC policy to {cfg.mc_adapter_out}")
 
 
 def evaluate_mc(cfg: MCConfig, beta: float, num_cities: int = 30):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    tokenizer = AutoTokenizer.from_pretrained(cfg.sft_adapter_path)
+    # use the MC-fine-tuned policy (theta) if present, else fall back to the SFT policy
+    adapter = cfg.mc_adapter_out if os.path.isdir(cfg.mc_adapter_out) else cfg.sft_adapter_path
+    tokenizer = AutoTokenizer.from_pretrained(adapter)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = load_model(cfg, tokenizer).to(device).eval()
+    model = GPT2WithQHead(load_policy(cfg.base_model_path, adapter), tokenizer).to(device).eval()
     model.q_head.load_state_dict(torch.load(cfg.q_function_out, map_location=device))
 
     env = GuessCityEnv(Phi3Oracle(device=device))

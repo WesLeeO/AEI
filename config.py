@@ -40,6 +40,7 @@ class MCConfig:
     sft_adapter_path: str = SFT_ADAPTER_PATH
     train_json: str = TRAIN_JSON
     q_function_out: str = "mc/q_function.pth"
+    mc_adapter_out: str = "mc/mc_model"   # the LoRA policy (theta) fine-tuned during MC
     max_length: int = MAX_LENGTH
     epochs: int = 1
     lr: float = 1e-5

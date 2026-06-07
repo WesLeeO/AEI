@@ -79,7 +79,8 @@ def train(cfg: PPOConfig, num_iterations: int):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = GPT2WithValueHead(load_policy(cfg.base_model_path, cfg.sft_adapter_path)).to(device)
+    model = GPT2WithValueHead(
+        load_policy(cfg.base_model_path, cfg.sft_adapter_path, trainable=True)).to(device)
     ref_model = load_policy(cfg.base_model_path, cfg.sft_adapter_path).to(device).eval()
     for p in ref_model.parameters():
         p.requires_grad = False

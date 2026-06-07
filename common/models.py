@@ -16,11 +16,15 @@ from transformers import AutoModelForCausalLM
 from peft import PeftModel
 
 
-def load_policy(base_model_path: str, adapter_path: Optional[str] = None):
-    """Load a base causal LM and (optionally) wrap it with a LoRA adapter."""
+def load_policy(base_model_path: str, adapter_path: Optional[str] = None, trainable: bool = False):
+    """Load a base causal LM and (optionally) wrap it with a LoRA adapter.
+
+    `trainable=True` keeps the LoRA params trainable (PEFT loads adapters frozen by
+    default). The base weights stay frozen either way; only the LoRA params can update.
+    """
     base = AutoModelForCausalLM.from_pretrained(base_model_path, local_files_only=True)
     if adapter_path is not None:
-        return PeftModel.from_pretrained(base, adapter_path)
+        return PeftModel.from_pretrained(base, adapter_path, is_trainable=trainable)
     return base
 
 
@@ -73,3 +77,6 @@ class GPT2WithQHead(nn.Module):
         out = self.policy(input_ids=input_ids, attention_mask=attention_mask, return_dict=True)
         q = self.q_head(out.hidden_states[-1])  # [B, L, V]
         return out.logits, q
+
+    def policy_trainable_parameters(self):
+        return [p for n, p in self.policy.named_parameters() if p.requires_grad]

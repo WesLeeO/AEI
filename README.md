@@ -1,4 +1,4 @@
-# LAS LAB Active Elicitation Information - GuessMyCity 
+# Semester Project, LAS LAB Active Elicitation Information
 
 A clean PyTorch reimplementation of three finetuning methods for the **GuessMyCity** task
 from [LMRL-Gym](https://github.com/abdulhaim/LMRL-Gym) (original is JAX). An "asker" policy
@@ -36,6 +36,48 @@ Expected local assets (not in this repo): `./gpt2-medium-offline` (base model),
 | **BC** (`bc/`) | imitate the asker | next-token CE masked to question tokens (`non_action_weight=0`) |
 | **MC** (`mc/`) | offline value-weighted decoding | per-token RTG over action tokens (γ=0.99) + CQL; decode `logits = sft + β·Q`, β=16 |
 | **PPO** (`ppo/`) | on-policy RL | KL folded into reward, GAE (γ=1.0, λ=0.95) + whitening, clipped policy/value loss |
+
+## Loss functions
+
+**BC** — masked next-token cross-entropy (answer tokens weighted by $w=$ `non_action_weight`, default $0$):
+
+$$\mathcal{L}_{\text{BC}}=-\frac{\sum_t m_t\,[a_t+(1-a_t)\,w]\,\log\pi_\theta(x_{t+1}\mid x_{\le t})}{\sum_t m_t}$$
+
+**MC** — Q-regression onto reward-to-go + CQL anchor; decoded with $\ell=\ell_\pi+\beta\,Q$ ($\beta=16$):
+
+$$\mathcal{L}_{\text{MC}}=\frac{1}{N}\sum_t m_t\Big[\tfrac12\big(Q_\phi(s_t,a_t)-\mathrm{sg}[R_t]\big)^2-\lambda_{\text{CQL}}\,\log\pi_\theta(a_t\mid s_t)\Big],\qquad R_t=\sum_{k\ge t}\gamma^{k-t}r_k$$
+
+**PPO** — clipped policy + clipped value, with the KL folded into the reward before GAE:
+
+$$\mathcal{L}_{\text{PPO}}=\frac{1}{N}\sum_t m_t\Big[\max\!\big(-A_t\rho_t,\,-A_t\,\mathrm{clip}(\rho_t,1\!-\!\epsilon,1\!+\!\epsilon)\big)+\tfrac{c_v}{2}\max\!\big((V_\psi-\hat R_t)^2,(V^{\text{clip}}-\hat R_t)^2\big)\Big]$$
+
+$$\rho_t=\frac{\pi_\theta(a_t\mid s_t)}{\pi_{\text{old}}(a_t\mid s_t)}$$
+
+$$\hat r_t=r_t-\beta_{\text{KL}}\big(\log\pi_{\text{old}}(a_t\mid s_t)-\log\pi_{\text{ref}}(a_t\mid s_t)\big)$$
+
+$$\delta_t=\hat r_t+\gamma V(s_{t+1})-V(s_t)$$
+
+$$A_t=\sum_{l\ge0}(\gamma\lambda)^l\delta_{t+l}$$
+
+$$\hat R_t=A_t+V(s_t)$$
+
+**Symbols.**
+
+- $\pi_\theta$ = policy LM (params $\theta$)
+- $Q_\phi$ = Q head (params $\phi$, separate from the LM)
+- $a_t$ = action (question-token) indicator at step $t$
+- $m_t$ = action mask $\wedge$ attention
+- $N=\sum_t m_t$
+- $\mathrm{sg}[\cdot]$ = stop-gradient
+- $R_t$ = (discounted) reward-to-go
+- $A_t$ = whitened GAE advantage
+- $\hat R_t$ = value target
+- $V_\psi$ = value head (params $\psi$, separate from the LM), $V^{\text{clip}}=V_{\text{old}}+\mathrm{clip}(V_\psi-V_{\text{old}},-\epsilon_v,\epsilon_v)$
+- $\beta$ = MC decode weight
+- $\beta_{\text{KL}}$ = `init_kl_coef`
+- $\lambda_{\text{CQL}}$ = `cql_weight`
+- $\epsilon,\epsilon_v$ = `cliprange`, `cliprange_value`
+- $c_v$ = `value_loss_coef`
 
 ## Usage
 
