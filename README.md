@@ -1,4 +1,4 @@
-# GuessMyCity — PyTorch port of LMRL-Gym
+# LAS LAB Active Elicitation Information - GuessMyCity 
 
 A clean PyTorch reimplementation of three finetuning methods for the **GuessMyCity** task
 from [LMRL-Gym](https://github.com/abdulhaim/LMRL-Gym) (original is JAX). An "asker" policy
