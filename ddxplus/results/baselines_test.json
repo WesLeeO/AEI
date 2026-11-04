@@ -1,0 +1,126 @@
+{
+  "nb_all_evidence (upper bound, no dialogue)": {
+    "accuracy": 0.9855,
+    "n_questions": 14.5645
+  },
+  "nb_no_questions": {
+    "in_differential": 0.6,
+    "n_questions": 0.0,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.0,
+    "return": 0.3455,
+    "accuracy": 0.3455,
+    "n": 2000
+  },
+  "random_5q + nb": {
+    "in_differential": 0.6775,
+    "n_questions": 5.0,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.022914167381754183,
+    "return": 0.40300000000000014,
+    "accuracy": 0.453,
+    "n": 2000
+  },
+  "random_10q + nb": {
+    "in_differential": 0.729,
+    "n_questions": 10.0,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.04381461311437584,
+    "return": 0.4415000000000001,
+    "accuracy": 0.5415,
+    "n": 2000
+  },
+  "random_20q + nb": {
+    "in_differential": 0.8315,
+    "n_questions": 20.0,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.09127572133982398,
+    "return": 0.498,
+    "accuracy": 0.698,
+    "n": 2000
+  },
+  "infogain_expert tau=0.5": {
+    "in_differential": 0.9415,
+    "n_questions": 0.9645,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.050010239921316785,
+    "return": 0.8333550000000002,
+    "accuracy": 0.843,
+    "n": 2000
+  },
+  "infogain_expert tau=0.7": {
+    "in_differential": 0.978,
+    "n_questions": 1.2745,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.060809915582944,
+    "return": 0.9227550000000001,
+    "accuracy": 0.9355,
+    "n": 2000
+  },
+  "infogain_expert tau=0.8": {
+    "in_differential": 0.9855,
+    "n_questions": 1.395,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.06534576579841489,
+    "return": 0.94105,
+    "accuracy": 0.955,
+    "n": 2000
+  },
+  "infogain_expert tau=0.9": {
+    "in_differential": 0.988,
+    "n_questions": 1.6595,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.07417069952551067,
+    "return": 0.9519050000000001,
+    "accuracy": 0.9685,
+    "n": 2000
+  },
+  "infogain_expert tau=0.95": {
+    "in_differential": 0.9935,
+    "n_questions": 1.861,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.08028099547484827,
+    "return": 0.9588900000000001,
+    "accuracy": 0.9775,
+    "n": 2000
+  },
+  "infogain_expert tau=0.99": {
+    "in_differential": 0.995,
+    "n_questions": 2.5335,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.10564499439839986,
+    "return": 0.9626650000000002,
+    "accuracy": 0.988,
+    "n": 2000
+  },
+  "noisy_expert eps=0.3 tau=0.9": {
+    "in_differential": 0.9875,
+    "n_questions": 2.2415,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.07411996512156789,
+    "return": 0.9455850000000001,
+    "accuracy": 0.968,
+    "n": 2000
+  },
+  "noisy_expert eps=0.6 tau=0.9": {
+    "in_differential": 0.988,
+    "n_questions": 3.5925,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.0,
+    "evidence_recall": 0.0742392464743601,
+    "return": 0.929575,
+    "accuracy": 0.9655,
+    "n": 2000
+  }
+}

@@ -12,3 +12,9 @@ sentencepiece       # tokenizer backend for the Phi-3 oracle
 # Training utilities
 tqdm>=4.65
 wandb>=0.16         # experiment logging (optional; guarded by wandb.run checks)
+
+# DDXPlus (ddxplus/)
+pandas
+scikit-learn
+matplotlib
+sentence-transformers  # question matching

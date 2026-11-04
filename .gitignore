@@ -17,3 +17,8 @@ LMRL-Gym/
 .DS_Store
 eval.json
 !common/__init__.py
+# DDXPlus
+ddxplus/data/
+ddxplus/ckpt/
+ddxplus/logs/
+.venv/

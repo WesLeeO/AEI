@@ -6,7 +6,13 @@ from [LMRL-Gym](https://github.com/abdulhaim/LMRL-Gym) (original is JAX). An "as
 freeform **Phi-3** oracle answers questions (the analog of the GPT-3 oracle that generated
 the official dataset).
 
-Reward (all methods, matching the benchmark): **−1 per question, 0 per answer, 0 for a
+The second task, **medical diagnosis** ([`ddxplus/`](ddxplus/README.md)), applies the same idea to doctor-style
+history-taking. An LLM asks a simulated DDXPlus patient questions, then predicts the pathology as an **ICD-10
+code**. It is trained with SFT, then **PPO** or **GRPO**, and works with any Hugging Face chat model
+(Qwen2.5 0.5B–7B, Llama-3.1-8B) rather than GPT-2. See its README for the environment, reward, baselines and
+cluster scripts.
+
+Reward for GuessMyCity (all methods, matching the benchmark): **−1 per question, 0 per answer, 0 for a
 correct final guess**.
 
 ## Layout
@@ -23,6 +29,7 @@ config.py          hyperparameters (BCConfig / MCConfig / PPOConfig), benchmark 
 bc/  train_bc.py   behaviour cloning (filtered imitation of the asker)
 mc/  mc_returns.py + train_mc.py   Monte-Carlo returns (Q-regression + CQL, beta decoding)
 ppo/ ppo.py + train_ppo.py         PPO (KL-in-reward, GAE, clipped loss)
+ddxplus/           medical-diagnosis task (DDXPlus, ICD-10): env, baselines, SFT, PPO, GRPO
 ```
 
 Expected local assets (not in this repo): `./gpt2-medium-offline` (base model),
@@ -36,6 +43,10 @@ Expected local assets (not in this repo): `./gpt2-medium-offline` (base model),
 | **BC** (`bc/`) | imitate the asker | next-token CE masked to question tokens (`non_action_weight=0`) |
 | **MC** (`mc/`) | offline value-weighted decoding | per-token RTG over action tokens (γ=0.99) + CQL; decode `logits = sft + β·Q`, β=16 |
 | **PPO** (`ppo/`) | on-policy RL | KL folded into reward, GAE (γ=1.0, λ=0.95) + whitening, clipped policy/value loss |
+| **GRPO** (`ddxplus/train_rl.py`) | critic-free on-policy RL | G rollouts per episode start, group-normalised returns, clipped loss + KL to the SFT reference |
+
+In `ddxplus/`, PPO is turn-level: each doctor message is one action, the value head scores the dialogue state
+before each turn, and GAE runs over turns.
 
 ## Loss functions
 
@@ -60,6 +71,13 @@ $$\delta_t=\hat r_t+\gamma V(s_{t+1})-V(s_t)$$
 $$A_t=\sum_{l\ge0}(\gamma\lambda)^l\delta_{t+l}$$
 
 $$\hat R_t=A_t+V(s_t)$$
+
+**GRPO** — for each start state, sample $G$ episodes with returns $R_1,\dots,R_G$; every action token of episode $i$
+gets the same advantage, and there is no value head:
+
+$$A_i=\frac{R_i-\mathrm{mean}(R_{1:G})}{\mathrm{std}(R_{1:G})},\qquad \mathcal{L}_{\text{GRPO}}=\frac{1}{N}\sum_t m_t\Big[\max\big(-A_i\rho_t,-A_i\,\mathrm{clip}(\rho_t,1-\epsilon,1+\epsilon)\big)+\beta_{\text{KL}}\big(e^{\Delta_t}-\Delta_t-1\big)\Big]$$
+
+$$\Delta_t=\log\pi_{\text{ref}}(a_t\mid s_t)-\log\pi_\theta(a_t\mid s_t)$$
 
 **Symbols.**
 
@@ -98,3 +116,5 @@ python ppo/train_ppo.py --mode eval --adapter ppo/ppo_model
 ```
 
 Hyperparameters live in `config.py` and default to the LMRL-Gym guess_city settings.
+
+For the DDXPlus task (SFT, PPO, GRPO), see [`ddxplus/README.md`](ddxplus/README.md).
