@@ -13,11 +13,11 @@
 set -euo pipefail
 MODEL=${MODEL:-Qwen/Qwen2.5-1.5B-Instruct}
 TAG=${TAG:-1.5b}
-cd "$(dirname "$0")/.."
+cd "${SLURM_SUBMIT_DIR:-$(dirname "$0")/..}"  # submit from the repo root
 mkdir -p logs results ckpt
 
 # Euler: module load stack/2024-06 python_cuda/3.11.6 ; then a venv with requirements.txt
-source ../.venv/bin/activate
+source .venv/bin/activate
 export HF_HOME=${HF_HOME:-$SCRATCH/hf_cache}
 
 # 1) non-LLM baselines + expert dialogues (CPU, minutes)

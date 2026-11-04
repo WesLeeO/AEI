@@ -1,120 +1,176 @@
-# Semester Project, LAS LAB Active Elicitation Information
+# Learning to Ask the Right Questions: Diagnostic History-Taking with RL
 
-A clean PyTorch reimplementation of three finetuning methods for the **GuessMyCity** task
-from [LMRL-Gym](https://github.com/abdulhaim/LMRL-Gym) (original is JAX). An "asker" policy
-(GPT-2-medium + LoRA) learns to identify a target city in as few questions as possible; a
-freeform **Phi-3** oracle answers questions (the analog of the GPT-3 oracle that generated
-the official dataset).
+Semester project, LAS Lab, ETH Zürich.
 
-The second task, **medical diagnosis** ([`ddxplus/`](ddxplus/README.md)), applies the same idea to doctor-style
-history-taking. An LLM asks a simulated DDXPlus patient questions, then predicts the pathology as an **ICD-10
-code**. It is trained with SFT, then **PPO** or **GRPO**, and works with any Hugging Face chat model
-(Qwen2.5 0.5B–7B, Llama-3.1-8B) rather than GPT-2. See its README for the environment, reward, baselines and
-cluster scripts.
+An LLM "doctor" talks to a simulated patient over several turns. It asks one question per turn, then commits to a
+diagnosis written as an **ICD-10 code**. It is trained with **SFT** (filtered behaviour cloning on expert dialogues),
+followed by online RL with **PPO** or **GRPO**. The goal is to be correct while asking as few questions as possible.
 
-Reward for GuessMyCity (all methods, matching the benchmark): **−1 per question, 0 per answer, 0 for a
-correct final guess**.
+Patients come from the public **DDXPlus** dataset (Fansi Tchango et al., NeurIPS 2022 Datasets & Benchmarks):
+1.3M synthetic patients, 49 pathologies, each with an ICD-10 code, and 223 evidences (symptoms and antecedents),
+each with a natural-language question.
 
-## Layout
+## Environment
 
-```
-common/            shared core (used by all three methods)
-  environment.py   Text / TokenTrajectory data structures (port of LLM_RL/environment.py)
-  guess_city.py    conversation parsing, Phi-3 oracle, live env, data loading
-  models.py        GPT2WithValueHead (PPO), GPT2WithQHead (MC)
-  utils.py         get_rtg (RTG), get_advantages_and_returns (GAE), whiten, padding
-  rollout.py       run one episode (policy + oracle)
-  evaluate.py      accuracy + avg-#questions over a set of cities
-config.py          hyperparameters (BCConfig / MCConfig / PPOConfig), benchmark defaults
-bc/  train_bc.py   behaviour cloning (filtered imitation of the asker)
-mc/  mc_returns.py + train_mc.py   Monte-Carlo returns (Q-regression + CQL, beta decoding)
-ppo/ ppo.py + train_ppo.py         PPO (KL-in-reward, GAE, clipped loss)
-ddxplus/           medical-diagnosis task (DDXPlus, ICD-10): env, baselines, SFT, PPO, GRPO
-```
+- **Patient:** age, sex, chief complaint (DDXPlus `INITIAL_EVIDENCE`) and a hidden set of evidences.
+- **Doctor turn:** a free-text question, or `Diagnosis: <condition> (ICD-10: <code>)`.
+- **Question → evidence:** exact match, otherwise nearest DDXPlus question by sentence-embedding cosine
+  (`bge-small-en-v1.5`, threshold 0.75). Below the threshold the patient answers "Sorry, I don't understand the question."
+- **Answers** are rendered deterministically from the ground truth ("Yes.", "No.", "Cheek(r), forehead.",
+  "4 (on a scale from 0 to 10)."). There is **no LLM oracle**, so the environment is cheap, exact and reproducible.
+- **Reward per doctor turn:** `−0.01` for a question; `+1` for a correct diagnosis (pathology / ICD-10 code), else `0`.
+  After 20 questions the next turn is forced to be the diagnosis. Episode return: $R = \mathbb{1}[\text{correct}] - 0.01\cdot\#\text{questions}$.
+- **Metrics:** ICD-10 top-1 accuracy, average number of questions, return, evidence recall (fraction of the patient's
+  positive evidences that were asked), unmatched / repeated question counts, and whether the prediction is in the
+  patient's DDXPlus differential.
 
-Expected local assets (not in this repo): `./gpt2-medium-offline` (base model),
-`bc/fine_tuned_gpt2_medium_lora_filtered` (SFT adapter), `train.json` / `eval.json`
-(official RAIL dataset), and the `microsoft/Phi-3-mini-4k-instruct` oracle.
+## Methods
 
-## Methods (what each replicates)
+| Method | What it is |
+|---|---|
+| zero-shot LLM | Instruct model, optionally with the list of askable questions in the prompt (`--question_menu`) |
+| **SFT** | LoRA fine-tuning on correct expert dialogues (doctor tokens only) |
+| **PPO** | Turn-level PPO: value head on the state before each doctor turn, KL-in-reward, GAE over turns, clipped policy and value losses |
+| **GRPO** | G rollouts per patient, group-normalised episode returns, clipped loss and KL to the SFT reference |
 
-| Method | Idea | Key faithful detail |
+RL starts from the SFT adapter, which is also the frozen reference policy for the KL terms.
+
+### Loss functions
+
+Notation: $\pi_\theta$ is the policy LM (LoRA), $\pi_{\text{old}}$ the policy that generated the rollouts, $\pi_{\text{ref}}$
+the frozen SFT policy. Token $t$ belongs to doctor turn $k(t)$; $m_t=1$ for doctor (action) tokens only, and
+$N=\sum_t m_t$.
+
+**SFT** — next-token cross-entropy on the doctor's tokens only (patient and prompt tokens are masked):
+
+$$\mathcal{L}_{\text{SFT}}=-\frac{1}{N}\sum_t m_t\log\pi_\theta(x_t\mid x_{<t})$$
+
+**PPO** — rewards, values and advantages are per **turn** $k$; the ratio and clipping are per **token**:
+
+$$\hat r_k=r_k-\beta_{\text{KL}}\sum_{t\in k}\big(\log\pi_{\text{old}}(x_t\mid x_{<t})-\log\pi_{\text{ref}}(x_t\mid x_{<t})\big)$$
+
+$$\delta_k=\hat r_k+\gamma V(s_{k+1})-V(s_k),\qquad A_k=\sum_{l\ge0}(\gamma\lambda)^l\delta_{k+l},\qquad \hat R_k=A_k+V(s_k)$$
+
+$$\rho_t=\frac{\pi_\theta(x_t\mid x_{<t})}{\pi_{\text{old}}(x_t\mid x_{<t})}$$
+
+$$\mathcal{L}_{\text{PPO}}=\frac{1}{N}\sum_t m_t\max\big(-A_{k(t)}\rho_t,\,-A_{k(t)}\mathrm{clip}(\rho_t,1-\epsilon,1+\epsilon)\big)+\frac{c_v}{K}\sum_k\tfrac12\max\big((V_\psi(s_k)-\hat R_k)^2,(V^{\text{clip}}_k-\hat R_k)^2\big)$$
+
+- $s_k$ is the dialogue before doctor turn $k$. $V_\psi$ is a value head on the hidden state that predicts that turn's first token.
+- Advantages are whitened over the batch and held fixed during the update. $\hat R_k$ is the λ-return, the critic's
+  regression target. $V^{\text{clip}}_k=V_{\text{old}}+\mathrm{clip}(V_\psi-V_{\text{old}},-\epsilon_v,\epsilon_v)$.
+- Why per turn: rewards only arrive once the patient answers a whole message, so credit is assigned per question,
+  not per token. Defaults: γ=1, λ=0.95, ε=ε_v=0.2, β_KL=0.02, c_v=0.5.
+
+**GRPO** — no critic. Each patient is played $G=8$ times with returns $R_1,\dots,R_G$, and every doctor token of
+episode $i$ gets the same advantage:
+
+$$A_i=\frac{R_i-\mathrm{mean}(R_{1:G})}{\mathrm{std}(R_{1:G})},\qquad \Delta_t=\log\pi_{\text{ref}}(x_t\mid x_{<t})-\log\pi_\theta(x_t\mid x_{<t})$$
+
+$$\mathcal{L}_{\text{GRPO}}=\frac{1}{N}\sum_t m_t\Big[\max\big(-A_i\rho_t,\,-A_i\,\mathrm{clip}(\rho_t,1-\epsilon,1+\epsilon)\big)+\beta_{\text{KL}}\big(e^{\Delta_t}-\Delta_t-1\big)\Big]$$
+
+## Bayesian baselines and the SFT expert
+
+`bayes.py` holds a non-LLM reference agent. It serves two purposes:
+
+1. a **baseline** that shows what good questioning looks like on DDXPlus;
+2. the **expert** whose successful dialogues make up the SFT data.
+
+**Naive Bayes model.** From 200k training patients, estimate the prior $P(c)$ over the 49 pathologies and the
+likelihood of each answer given the pathology: $P(\text{yes}\mid c)$ for yes/no evidences, $P(\text{value}\mid c)$ for
+categorical ones (e.g. pain intensity 0–10), and $P(\text{value}\in\text{answer}\mid c)$ for multi-choice ones (e.g.
+pain location), all with Laplace smoothing. Given the answers so far, the posterior is
+
+$$P(c\mid \text{answers})\;\propto\;P(c)\,P(\text{age}\mid c)\,P(\text{sex}\mid c)\prod_{\text{answers } e}P(e\mid c).$$
+
+**Information-gain expert.** At each turn, pick the question whose answer is expected to reduce the posterior's
+uncertainty the most:
+
+$$e^\star=\arg\max_e\Big[H\big(P(c)\big)-\mathbb{E}_{\text{answer}}\,H\big(P(c\mid\text{answer})\big)\Big]$$
+
+Stop when $\max_c P(c\mid\cdot)\ge\tau$ (or after 20 questions) and diagnose $\arg\max_c$. Expected entropies are exact
+for yes/no and categorical questions, and Monte-Carlo estimated for multi-choice ones. `--epsilon` makes the expert
+ask a random question with probability ε, which gives a weaker demonstrator that RL can improve on.
+
+DDXPlus patients are sampled from a generator in which evidences are (close to) conditionally independent given the
+pathology. That makes Naive Bayes nearly the right model, so the expert is a very strong reference. The interesting
+questions are how close LLM agents get, and how much RL improves over imitation.
+
+## Results
+
+Non-LLM baselines, DDXPlus test (2,000 patients), played through the same text environment:
+
+<!-- filled from results/baselines_test.json -->
+| Method | ICD-10 acc. | # questions | Return |
+|---|---|---|---|
+| Naive Bayes, all evidences known (upper bound, no dialogue) | 98.6% | 14.6 | – |
+| Naive Bayes, no questions (age, sex, complaint) | 34.5% | 0.0 | 0.345 |
+| 5 random questions + NB | 45.3% | 5.0 | 0.403 |
+| 10 random questions + NB | 54.1% | 10.0 | 0.442 |
+| 20 random questions + NB | 69.8% | 20.0 | 0.498 |
+| Info-gain expert, τ=0.5 | 84.3% | 1.0 | 0.833 |
+| Info-gain expert, τ=0.7 | 93.5% | 1.3 | 0.923 |
+| Info-gain expert, τ=0.8 | 95.5% | 1.4 | 0.941 |
+| Info-gain expert, τ=0.9 | 96.9% | 1.7 | 0.952 |
+| Info-gain expert, τ=0.95 | 97.8% | 1.9 | 0.959 |
+| Info-gain expert, τ=0.99 | 98.8% | 2.5 | 0.963 |
+| Noisy expert, ε=0.3, τ=0.9 | 96.8% | 2.2 | 0.946 |
+| Noisy expert, ε=0.6, τ=0.9 | 96.5% | 3.6 | 0.930 |
+
+LLM agents: **to be filled after running on the cluster** (`results/*.json`, `results/pareto.png`).
+
+| Agent | Model | ICD-10 acc. | # questions | Return |
+|---|---|---|---|---|
+| zero-shot | | | | |
+| zero-shot + question list | | | | |
+| SFT | | | | |
+| SFT → PPO | | | | |
+| SFT → GRPO | | | | |
+
+## Models
+
+Any Hugging Face chat model works through `--model` (LoRA everywhere, bf16 on GPU):
+
+| Model | GPU memory (SFT / RL) | Notes |
 |---|---|---|
-| **BC** (`bc/`) | imitate the asker | next-token CE masked to question tokens (`non_action_weight=0`) |
-| **MC** (`mc/`) | offline value-weighted decoding | per-token RTG over action tokens (γ=0.99) + CQL; decode `logits = sft + β·Q`, β=16 |
-| **PPO** (`ppo/`) | on-policy RL | KL folded into reward, GAE (γ=1.0, λ=0.95) + whitening, clipped policy/value loss |
-| **GRPO** (`ddxplus/train_rl.py`) | critic-free on-policy RL | G rollouts per episode start, group-normalised returns, clipped loss + KL to the SFT reference |
+| `Qwen/Qwen2.5-0.5B-Instruct` | ~16 GB | debugging only |
+| `Qwen/Qwen2.5-1.5B-Instruct` | 24–40 GB | default; fast iteration |
+| `Qwen/Qwen2.5-3B-Instruct` | 40 GB | |
+| `Qwen/Qwen2.5-7B-Instruct` / `meta-llama/Llama-3.1-8B-Instruct` | 80 GB (`--grad_ckpt`, smaller `--micro_batch`) | strongest zero-shot baseline |
 
-In `ddxplus/`, PPO is turn-level: each doctor message is one action, the value head scores the dialogue state
-before each turn, and GAE runs over turns.
-
-## Loss functions
-
-**BC** — masked next-token cross-entropy (answer tokens weighted by $w=$ `non_action_weight`, default $0$):
-
-$$\mathcal{L}_{\text{BC}}=-\frac{\sum_t m_t [a_t+(1-a_t) w] \log\pi_\theta(x_{t+1}\mid x_{\le t})}{\sum_t m_t}$$
-
-**MC** — Q-regression onto reward-to-go + CQL anchor; decoded with $\ell=\ell_\pi+\beta Q$ ($\beta=16$):
-
-$$\mathcal{L}_{\text{MC}}=\frac{1}{N}\sum_t m_t\Big[\tfrac12\big(Q_\phi(s_t,a_t)-\mathrm{sg}[R_t]\big)^2-\lambda_{\text{CQL}} \log\pi_\theta(a_t\mid s_t)\Big],\qquad R_t=\sum_{k\ge t}\gamma^{k-t}r_k$$
-
-**PPO** — clipped policy + clipped value, with the KL folded into the reward before GAE:
-
-$$\mathcal{L}_{\text{PPO}}=\frac{1}{N}\sum_t m_t\Big[\max\big(-A_t\rho_t, -A_t \mathrm{clip}(\rho_t,1-\epsilon,1+\epsilon)\big)+\tfrac{c_v}{2}\max\big((V_\psi-\hat R_t)^2,(V^{\text{clip}}-\hat R_t)^2\big)\Big]$$
-
-$$\rho_t=\frac{\pi_\theta(a_t\mid s_t)}{\pi_{\text{old}}(a_t\mid s_t)}$$
-
-$$\hat r_t=r_t-\beta_{\text{KL}}\big(\log\pi_{\text{old}}(a_t\mid s_t)-\log\pi_{\text{ref}}(a_t\mid s_t)\big)$$
-
-$$\delta_t=\hat r_t+\gamma V(s_{t+1})-V(s_t)$$
-
-$$A_t=\sum_{l\ge0}(\gamma\lambda)^l\delta_{t+l}$$
-
-$$\hat R_t=A_t+V(s_t)$$
-
-**GRPO** — for each start state, sample $G$ episodes with returns $R_1,\dots,R_G$; every action token of episode $i$
-gets the same advantage, and there is no value head:
-
-$$A_i=\frac{R_i-\mathrm{mean}(R_{1:G})}{\mathrm{std}(R_{1:G})},\qquad \mathcal{L}_{\text{GRPO}}=\frac{1}{N}\sum_t m_t\Big[\max\big(-A_i\rho_t,-A_i\,\mathrm{clip}(\rho_t,1-\epsilon,1+\epsilon)\big)+\beta_{\text{KL}}\big(e^{\Delta_t}-\Delta_t-1\big)\Big]$$
-
-$$\Delta_t=\log\pi_{\text{ref}}(a_t\mid s_t)-\log\pi_\theta(a_t\mid s_t)$$
-
-**Symbols.**
-
-- $\pi_\theta$ = policy LM (params $\theta$)
-- $Q_\phi$ = Q head (params $\phi$, separate from the LM)
-- $a_t$ = action (question-token) indicator at step $t$
-- $m_t$ = action mask $\wedge$ attention
-- $N=\sum_t m_t$
-- $\mathrm{sg}[\cdot]$ = stop-gradient
-- $R_t$ = (discounted) reward-to-go
-- $A_t$ = whitened GAE advantage
-- $\hat R_t$ = value target
-- $V_\psi$ = value head (params $\psi$, separate from the LM), $V^{\text{clip}}=V_{\text{old}}+\mathrm{clip}(V_\psi-V_{\text{old}},-\epsilon_v,\epsilon_v)$
-- $\beta$ = MC decode weight
-- $\beta_{\text{KL}}$ = `init_kl_coef`
-- $\lambda_{\text{CQL}}$ = `cql_weight`
-- $\epsilon,\epsilon_v$ = `cliprange`, `cliprange_value`
-- $c_v$ = `value_loss_coef`
+Qwen3 chat templates (thinking mode) are not supported by the action-mask tokenisation; use Qwen2.5 or Llama-3.
 
 ## Usage
 
 ```bash
 pip install -r requirements.txt
+# DDXPlus (~180 MB zipped) from https://figshare.com/articles/dataset/20043374 into data/, then unzip
 
-# Behaviour cloning
-python bc/train_bc.py --mode train
-python bc/train_bc.py --mode eval --adapter bc/bc_model
+python baselines.py --mode eval --n 2000              # results/baselines_test.json
+python baselines.py --mode make_sft --n 20000         # data/sft_expert.jsonl
 
-# Monte-Carlo returns (trains a Q head on the frozen SFT policy)
-python mc/train_mc.py --mode train
-python mc/train_mc.py --mode eval --beta 16
+python evaluate.py --model Qwen/Qwen2.5-1.5B-Instruct --name zeroshot_1.5b --question_menu
+python train_sft.py --model Qwen/Qwen2.5-1.5B-Instruct --out ckpt/sft_1.5b
+python train_rl.py --algo ppo  --model Qwen/Qwen2.5-1.5B-Instruct --adapter ckpt/sft_1.5b --out ckpt/ppo_1.5b
+python train_rl.py --algo grpo --model Qwen/Qwen2.5-1.5B-Instruct --adapter ckpt/sft_1.5b --out ckpt/grpo_1.5b
+python evaluate.py --model Qwen/Qwen2.5-1.5B-Instruct --adapter ckpt/ppo_1.5b/best --name ppo_1.5b
+python plot.py
 
-# PPO
-python ppo/train_ppo.py --mode train --num-iterations 100
-python ppo/train_ppo.py --mode eval --adapter ppo/ppo_model
+# everything at once on a SLURM cluster (ETH Euler), submitted from the repo root:
+sbatch --export=MODEL=Qwen/Qwen2.5-1.5B-Instruct,TAG=1.5b slurm/pipeline.sbatch
 ```
 
-Hyperparameters live in `config.py` and default to the LMRL-Gym guess_city settings.
+## Files
 
-For the DDXPlus task (SFT, PPO, GRPO), see [`ddxplus/README.md`](ddxplus/README.md).
+```
+data.py        knowledge base (questions, ICD-10 codes) + patient loading
+env.py         text environment: question matching, patient answers, diagnosis parsing, reward
+bayes.py       Naive Bayes + information-gain expert
+baselines.py   non-LLM baselines, expert SFT dialogues
+llm.py         model/LoRA loading, chat tokenisation with action masks, batched generation
+rollout.py     batched multi-turn rollouts + evaluation
+train_sft.py   SFT (filtered behaviour cloning)
+train_rl.py    PPO and GRPO
+evaluate.py    held-out evaluation -> results/<name>.json
+plot.py        accuracy-vs-questions plot, RL curves
+slurm/         cluster job script
+```

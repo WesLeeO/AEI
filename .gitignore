@@ -1,24 +1,10 @@
-/hf_home
-/wandb
-hello_*
-train.json
-job.sh
-gpt2-medium-offline/
-__init__.py
-__pycache__/
-downloader.py
-downloader2.py
-/guess_env
-mc/fine_tuned_gpt2_medium_mc_lora/
-bc/fine_tuned_gpt2_medium_lora/
-bc/fine_tuned_gpt2_medium_lora-2/
-bc/new_training.json
-LMRL-Gym/
-.DS_Store
-eval.json
-!common/__init__.py
-# DDXPlus
-ddxplus/data/
-ddxplus/ckpt/
-ddxplus/logs/
+# DDXPlus data (download from figshare), checkpoints, logs
+data/
+ckpt/
+logs/
+wandb/
+hf_home/
+
 .venv/
+__pycache__/
+.DS_Store
