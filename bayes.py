@@ -51,11 +51,17 @@ class NaiveBayes:
 
         self.binary = [e for e in kb.evidence_names if kb.dtype(e) == "B"]
         self.b_index = {e: i for i, e in enumerate(self.binary)}
-        feats = np.array([[e in p.evidences for e in self.binary] for p in patients], dtype=float)
+        feats = np.zeros((len(patients), len(self.binary)))
+        for i, p in enumerate(patients):
+            for e in kb.positive_evidences(p):
+                if e in self.b_index:
+                    feats[i, self.b_index[e]] = 1
         self.b_prob = cond_mean(feats)  # (nB, C)
 
         self.cat, self.multi = {}, {}
         for e in kb.evidence_names:
+            if kb.dtype(e) == "B":
+                continue
             vals = kb.values(e)
             vidx = {v: i for i, v in enumerate(vals)}
             if kb.dtype(e) == "C":
@@ -72,7 +78,8 @@ class NaiveBayes:
     def load_or_fit(cls, kb: KnowledgeBase, n_train: int = 200_000, seed: int = 0) -> "NaiveBayes":
         from data import load_patients
 
-        path = os.path.join(DATA_DIR, f"nb_{n_train}_{seed}.pkl")
+        mode = "_binary" if kb.binary_questions else ""
+        path = os.path.join(DATA_DIR, f"nb_{n_train}_{seed}{mode}.pkl")
         if os.path.exists(path):
             with open(path, "rb") as f:
                 return pickle.load(f)
@@ -130,11 +137,14 @@ class NaiveBayes:
             gains[e] = h - float(entropy(np.apply_along_axis(self.normalize, 1, log_post)).mean())
         return gains
 
-    def predict(self, p: Patient, evidences) -> int:
+    def log_posterior(self, p: Patient, evidences) -> np.ndarray:
         lp = self.initial_log_post(p)
         for e in evidences:
             lp = lp + self.log_lik(e, p.observation(self.kb, e))
-        return int(np.argmax(lp))
+        return lp
+
+    def predict(self, p: Patient, evidences) -> int:
+        return int(np.argmax(self.log_posterior(p, evidences)))
 
 
 class InfoGainExpert:
@@ -145,8 +155,8 @@ class InfoGainExpert:
         self.epsilon = epsilon  # prob. of asking a random question instead (weaker demonstrator)
         self.rng = np.random.default_rng(seed)
 
-    def run(self, p: Patient) -> tuple[list[str], int]:
-        """Returns (asked evidences, predicted condition index)."""
+    def run(self, p: Patient) -> tuple[list[str], np.ndarray]:
+        """Returns (asked evidences, final log-posterior over conditions)."""
         lp = self.nb.initial_log_post(p)
         asked = [p.initial_evidence]
         while len(asked) - 1 < self.max_questions:
@@ -160,4 +170,4 @@ class InfoGainExpert:
                 e = max((g, e) for e, g in gains.items() if e not in asked)[1]
             asked.append(e)
             lp = lp + self.nb.log_lik(e, p.observation(self.nb.kb, e))
-        return asked[1:], int(np.argmax(lp))
+        return asked[1:], lp

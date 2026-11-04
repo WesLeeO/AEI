@@ -20,9 +20,23 @@ each with a natural-language question.
   "4 (on a scale from 0 to 10)."). There is **no LLM oracle**, so the environment is cheap, exact and reproducible.
 - **Reward per doctor turn:** `−0.01` for a question; `+1` for a correct diagnosis (pathology / ICD-10 code), else `0`.
   After 20 questions the next turn is forced to be the diagnosis. Episode return: $R = \mathbb{1}[\text{correct}] - 0.01\cdot\#\text{questions}$.
-- **Metrics:** ICD-10 top-1 accuracy, average number of questions, return, evidence recall (fraction of the patient's
-  positive evidences that were asked), unmatched / repeated question counts, and whether the prediction is in the
-  patient's DDXPlus differential.
+- **Metrics:** ICD-10 top-1 and top-3 accuracy, average number of questions, return, differential recall / precision
+  (see below), evidence recall (fraction of the patient's positive evidences that were asked), and unmatched /
+  repeated question counts.
+
+### Settings
+
+| Flag | Effect |
+|---|---|
+| *(none)* — **easy** | Original DDXPlus questions. Multi-choice questions ("Do you feel pain somewhere?") reveal several facts in one answer ("Cheek(r), forehead."). |
+| `--binary_questions` | **Yes/no only.** Every multi-choice question is split into one yes/no question per option ("Do you feel pain in the left cheek?"), 210 new questions in total (428 askable questions overall). The scale and categorical questions (e.g. pain intensity 0–10) stay as they are. |
+| `--differential` | The doctor answers with a **ranked differential** of up to 3 conditions: `Diagnosis: A (ICD-10: ..); B (ICD-10: ..); C (ICD-10: ..)`. Top-1 is the first entry. |
+| `--ddx_reward_weight w` | Diagnosis reward becomes $(1-w)\cdot\mathbb{1}[\text{top-1 correct}] + w\cdot\text{ddx recall}$ (default $w=0$). |
+
+The **hard** setting is `--binary_questions --differential`. **Differential recall** is the fraction of the DDXPlus
+ground-truth top-3 differential (each patient comes with a ranked list of plausible pathologies) that appears in
+the predicted ranking. **Differential precision** is the fraction of predicted conditions that appear anywhere in
+the ground-truth differential.
 
 ## Methods
 
@@ -97,34 +111,46 @@ questions are how close LLM agents get, and how much RL improves over imitation.
 
 ## Results
 
-Non-LLM baselines, DDXPlus test (2,000 patients), played through the same text environment:
+Non-LLM baselines, DDXPlus test (2,000 patients), played through the same text environment. The full sweeps
+(τ ∈ {0.5…0.99}, 5/10/20 random questions) are in `results/baselines_test*.json`.
 
-<!-- filled from results/baselines_test.json -->
-| Method | ICD-10 acc. | # questions | Return |
-|---|---|---|---|
-| Naive Bayes, all evidences known (upper bound, no dialogue) | 98.6% | 14.6 | – |
-| Naive Bayes, no questions (age, sex, complaint) | 34.5% | 0.0 | 0.345 |
-| 5 random questions + NB | 45.3% | 5.0 | 0.403 |
-| 10 random questions + NB | 54.1% | 10.0 | 0.442 |
-| 20 random questions + NB | 69.8% | 20.0 | 0.498 |
-| Info-gain expert, τ=0.5 | 84.3% | 1.0 | 0.833 |
-| Info-gain expert, τ=0.7 | 93.5% | 1.3 | 0.923 |
-| Info-gain expert, τ=0.8 | 95.5% | 1.4 | 0.941 |
-| Info-gain expert, τ=0.9 | 96.9% | 1.7 | 0.952 |
-| Info-gain expert, τ=0.95 | 97.8% | 1.9 | 0.959 |
-| Info-gain expert, τ=0.99 | 98.8% | 2.5 | 0.963 |
-| Noisy expert, ε=0.3, τ=0.9 | 96.8% | 2.2 | 0.946 |
-| Noisy expert, ε=0.6, τ=0.9 | 96.5% | 3.6 | 0.930 |
+| Setting | Method | Top-1 acc. | Top-3 acc. | DDx recall | # questions |
+|---|---|---|---|---|---|
+| easy | NB, no questions (age, sex, complaint) | 34.5% | 34.5% | 0.18 | 0.0 |
+| easy | 20 random questions + NB | 69.8% | 69.8% | 0.28 | 20.0 |
+| easy | Info-gain expert, τ=0.9 | 96.9% | 96.9% | 0.35 | 1.7 |
+| easy | Noisy expert, ε=0.6 | 96.5% | 96.5% | 0.35 | 3.6 |
+| yes/no | 20 random questions + NB | 59.9% | 59.9% | 0.25 | 20.0 |
+| yes/no | Info-gain expert, τ=0.9 | 97.2% | 97.2% | 0.35 | 4.1 |
+| yes/no | Noisy expert, ε=0.6 | 93.3% | 93.3% | 0.34 | 7.7 |
+| **hard** (yes/no + differential) | NB, no questions | 34.5% | 57.9% | 0.35 | 0.0 |
+| **hard** | 20 random questions + NB | 59.9% | 80.3% | 0.41 | 20.0 |
+| **hard** | Info-gain expert, τ=0.9 | 97.2% | 99.8% | 0.48 | 4.1 |
+| **hard** | Noisy expert, ε=0.6 | 93.3% | 97.8% | 0.47 | 7.7 |
+
+Takeaways:
+
+- **Multi-choice questions make DDXPlus easy.** One "where is your pain?" question lifts accuracy from 35% to about 85%.
+  With yes/no questions only, the expert needs about 2.4× more questions (4.1 vs 1.7), and random questioning
+  drops by 10 points.
+- **The differential leaves headroom.** The expert is almost always right in its top 3, but it recovers only about
+  half of the DDXPlus ground-truth differential (recall ≈ 0.48). Naive Bayes is overconfident and ranks the
+  runners-up poorly. This is a natural target for RL with `--ddx_reward_weight > 0`.
+- With every question answered, Naive Bayes reaches 99.6% top-1, so the remaining challenge is choosing *which*
+  few questions to ask.
 
 LLM agents: **to be filled after running on the cluster** (`results/*.json`, `results/pareto.png`).
 
-| Agent | Model | ICD-10 acc. | # questions | Return |
-|---|---|---|---|---|
-| zero-shot | | | | |
-| zero-shot + question list | | | | |
-| SFT | | | | |
-| SFT → PPO | | | | |
-| SFT → GRPO | | | | |
+| Setting | Agent | Model | Top-1 acc. | Top-3 acc. | DDx recall | # questions | Return |
+|---|---|---|---|---|---|---|---|
+| easy | zero-shot + question list | | | | | | |
+| easy | SFT | | | | | | |
+| easy | SFT → PPO | | | | | | |
+| easy | SFT → GRPO | | | | | | |
+| hard | zero-shot + question list | | | | | | |
+| hard | SFT | | | | | | |
+| hard | SFT → PPO | | | | | | |
+| hard | SFT → GRPO | | | | | | |
 
 ## Models
 
@@ -155,8 +181,12 @@ python train_rl.py --algo grpo --model Qwen/Qwen2.5-1.5B-Instruct --adapter ckpt
 python evaluate.py --model Qwen/Qwen2.5-1.5B-Instruct --adapter ckpt/ppo_1.5b/best --name ppo_1.5b
 python plot.py
 
+# hard setting: add the same flags to every command (baselines, SFT data, training and evaluation)
+python baselines.py --mode make_sft --n 20000 --binary_questions --differential   # data/sft_expert_binary_ddx.jsonl
+
 # everything at once on a SLURM cluster (ETH Euler), submitted from the repo root:
-sbatch --export=MODEL=Qwen/Qwen2.5-1.5B-Instruct,TAG=1.5b slurm/pipeline.sbatch
+sbatch --export=ALL,MODEL=Qwen/Qwen2.5-1.5B-Instruct,TAG=1.5b slurm/pipeline.sbatch
+sbatch --export=ALL,MODEL=Qwen/Qwen2.5-1.5B-Instruct,TAG=1.5b,SETTING=hard slurm/pipeline.sbatch
 ```
 
 ## Files

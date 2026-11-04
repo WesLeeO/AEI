@@ -20,8 +20,8 @@ import numpy as np
 import torch
 from peft import PeftModel
 
-from data import KnowledgeBase, load_patients
-from env import EnvConfig, EnvFactory, aggregate
+from data import load_patients
+from env import add_env_args, aggregate, build_env
 from llm import (ValueHead, action_logprobs, collate, load_policy, load_tokenizer, tokenize_dialogue,
                  turn_start_states)
 from rollout import evaluate, run_episodes
@@ -69,9 +69,7 @@ class Trainer:
             groups.append({"params": self.value_head.parameters(), "lr": args.value_lr})
         self.opt = torch.optim.AdamW(groups, weight_decay=0.0)
 
-        kb = KnowledgeBase()
-        cfg = EnvConfig(max_questions=args.max_questions, question_cost=args.question_cost)
-        self.make_env = EnvFactory(kb, cfg)
+        self.make_env = build_env(args)
         self.train_pool = load_patients("train", args.train_pool, seed=args.pool_seed)
         self.val_patients = load_patients("validate", args.eval_n, seed=0)
 
@@ -238,8 +236,7 @@ def main():
     ap.add_argument("--lam", type=float, default=0.95)
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--top_p", type=float, default=1.0)
-    ap.add_argument("--max_questions", type=int, default=20)
-    ap.add_argument("--question_cost", type=float, default=0.01)
+    add_env_args(ap)
     ap.add_argument("--train_pool", type=int, default=50_000)
     ap.add_argument("--pool_seed", type=int, default=2)
     ap.add_argument("--eval_n", type=int, default=200)

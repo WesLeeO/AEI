@@ -7,8 +7,8 @@ import argparse
 import json
 import os
 
-from data import KnowledgeBase, load_patients
-from env import EnvConfig, EnvFactory
+from data import load_patients
+from env import add_env_args, build_env
 from llm import load_policy, load_tokenizer
 from rollout import evaluate
 
@@ -21,17 +21,14 @@ def main():
     ap.add_argument("--split", default="test")
     ap.add_argument("--n", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--max_questions", type=int, default=20)
-    ap.add_argument("--question_cost", type=float, default=0.01)
+    add_env_args(ap)
     ap.add_argument("--question_menu", action="store_true", help="list askable questions in the prompt")
     ap.add_argument("--batch_size", type=int, default=64)
     args = ap.parse_args()
 
     tok = load_tokenizer(args.adapter or args.model)
     model = load_policy(args.model, adapter=args.adapter, trainable=False)
-    kb = KnowledgeBase()
-    make_env = EnvFactory(kb, EnvConfig(max_questions=args.max_questions, question_cost=args.question_cost,
-                                        question_menu=args.question_menu))
+    make_env = build_env(args, question_menu=args.question_menu)
     patients = load_patients(args.split, args.n, args.seed)
     metrics = evaluate(model, tok, make_env, patients, out_path=os.path.join("results", f"{args.name}.json"),
                        batch_size=args.batch_size)

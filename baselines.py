@@ -4,8 +4,8 @@ Every baseline is played through the same text environment as the LLM agents (qu
 sent as their DDXPlus question text, diagnoses as 'Diagnosis: ... (ICD-10: ...)'), so all
 metrics are directly comparable.
 
-  python baselines.py --mode eval --n 2000
-  python baselines.py --mode make_sft --n 20000 --out data/sft_expert.jsonl
+  python baselines.py --mode eval --n 2000 [--binary_questions] [--differential]
+  python baselines.py --mode make_sft --n 20000 [--binary_questions] [--differential]
 """
 import argparse
 import json
@@ -16,12 +16,16 @@ import numpy as np
 from tqdm import tqdm
 
 from bayes import InfoGainExpert, NaiveBayes
-from data import KnowledgeBase, load_patients
-from env import EnvConfig, EnvFactory, aggregate
+from data import load_patients
+from env import DIFFERENTIAL_K, add_env_args, aggregate, build_env, setting_tag
 
 
-def diagnosis_text(kb: KnowledgeBase, cond: str) -> str:
-    return f"Diagnosis: {cond} (ICD-10: {kb.icd_label[cond]})"
+def diagnosis_text(make_env, log_post: np.ndarray) -> str:
+    """'Diagnosis: A (ICD-10: ..)' or, in differential mode, the top-3 ranking separated by ';'."""
+    kb = make_env.kb
+    k = DIFFERENTIAL_K if make_env.cfg.differential else 1
+    top = [kb.conditions[i] for i in np.argsort(-log_post)[:k]]
+    return "Diagnosis: " + "; ".join(f"{c} (ICD-10: {kb.icd_label[c]})" for c in top)
 
 
 def play(make_env, patient, questions: list[str], diagnosis: str):
@@ -37,8 +41,8 @@ def run_infogain(kb, nb, make_env, patients, threshold, max_q, epsilon=0.0):
     expert = InfoGainExpert(nb, threshold, max_q, epsilon)
     envs = []
     for p in patients:
-        asked, pred = expert.run(p)
-        envs.append(play(make_env, p, asked, diagnosis_text(kb, kb.conditions[pred])))
+        asked, log_post = expert.run(p)
+        envs.append(play(make_env, p, asked, diagnosis_text(make_env, log_post)))
     return envs
 
 
@@ -47,8 +51,7 @@ def run_random(kb, nb, make_env, patients, k, rng):
     for p in patients:
         pool = [e for e in kb.evidence_names if e != p.initial_evidence]
         asked = rng.sample(pool, k)
-        pred = kb.conditions[nb.predict(p, asked)]
-        envs.append(play(make_env, p, asked, diagnosis_text(kb, pred)))
+        envs.append(play(make_env, p, asked, diagnosis_text(make_env, nb.log_posterior(p, asked))))
     return envs
 
 
@@ -58,21 +61,20 @@ def main():
     ap.add_argument("--split", default="test")
     ap.add_argument("--n", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--max_questions", type=int, default=20)
-    ap.add_argument("--question_cost", type=float, default=0.01)
+    add_env_args(ap)
     ap.add_argument("--threshold", type=float, default=0.9, help="expert stopping threshold (make_sft)")
     ap.add_argument("--epsilon", type=float, default=0.0, help="expert random-question rate (make_sft)")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
-    kb = KnowledgeBase()
+    make_env = build_env(args)
+    kb = make_env.kb
     nb = NaiveBayes.load_or_fit(kb)
-    make_env = EnvFactory(kb, EnvConfig(max_questions=args.max_questions, question_cost=args.question_cost))
 
     if args.mode == "make_sft":
         # seed+1 so the dialogues are mostly disjoint from the NB fitting sample
         patients = load_patients("train", args.n, args.seed + 1)
-        out = args.out or os.path.join("data", "sft_expert.jsonl")
+        out = args.out or os.path.join("data", f"sft_expert{setting_tag(args)}.jsonl")
         kept = 0
         with open(out, "w") as f:
             for env in tqdm(run_infogain(kb, nb, make_env, patients, args.threshold, args.max_questions, args.epsilon)):
@@ -87,11 +89,13 @@ def main():
     rng = random.Random(args.seed)
     results = {}
 
-    results["nb_all_evidence (upper bound, no dialogue)"] = {
-        "accuracy": float(np.mean([kb.conditions[nb.predict(p, p.evidences)] == p.pathology for p in patients])),
-        "n_questions": float(np.mean([len(p.evidences) - 1 for p in patients])),
+    all_q = [e for e in kb.evidence_names]
+    results["nb_all_questions_answered (upper bound, no dialogue)"] = {
+        "accuracy": float(np.mean([kb.conditions[nb.predict(p, all_q)] == p.pathology for p in patients])),
+        "n_questions": float(len(all_q)),
     }
-    results["nb_no_questions"] = aggregate([play(make_env, p, [], diagnosis_text(kb, kb.conditions[nb.predict(p, [])])).summary() for p in patients])
+    results["nb_no_questions"] = aggregate(
+        [play(make_env, p, [], diagnosis_text(make_env, nb.log_posterior(p, []))).summary() for p in patients])
     for k in [5, 10, 20]:
         results[f"random_{k}q + nb"] = aggregate([e.summary() for e in run_random(kb, nb, make_env, patients, k, rng)])
     for tau in [0.5, 0.7, 0.8, 0.9, 0.95, 0.99]:
@@ -102,11 +106,12 @@ def main():
         results[f"noisy_expert eps={eps} tau=0.9"] = aggregate([e.summary() for e in envs])
 
     os.makedirs("results", exist_ok=True)
-    with open(os.path.join("results", f"baselines_{args.split}.json"), "w") as f:
+    with open(os.path.join("results", f"baselines_{args.split}{setting_tag(args)}.json"), "w") as f:
         json.dump(results, f, indent=2)
     for name, r in results.items():
-        print(f"{name:45s} acc={r['accuracy']:.3f}  questions={r['n_questions']:.1f}"
-              + (f"  recall={r['evidence_recall']:.2f}  return={r['return']:.3f}" if "return" in r else ""))
+        print(f"{name:52s} acc={r['accuracy']:.3f}  questions={r['n_questions']:.1f}"
+              + (f"  top3={r['top3']:.3f}  ddx_recall={r['ddx_recall']:.2f}  return={r['return']:.3f}"
+                 if "return" in r else ""))
 
 
 if __name__ == "__main__":

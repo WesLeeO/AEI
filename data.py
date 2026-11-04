@@ -28,10 +28,31 @@ def normalize_icd(code: str) -> list[str]:
     return [c.strip().upper() for c in re.split(r"[,/]", code) if c.strip()]
 
 
-class KnowledgeBase:
-    """Evidence (question) and condition metadata."""
+LOCATION_QUESTIONS = {  # yes/no templates for multi-choice evidences (binary_questions mode)
+    "E_55": "Do you feel pain in the {}?",
+    "E_57": "Does the pain radiate to the {}?",
+    "E_133": "Is the affected region located on the {}?",
+    "E_152": "Is there swelling in the {}?",
+    "E_54": "Would you describe your pain as {}?",
+}
 
-    def __init__(self, data_dir: str = DATA_DIR):
+
+def _side(text: str) -> str:
+    """'iliac wing(R)' -> 'right iliac wing'."""
+    m = re.match(r"(.*)\((R|L)\)\s*$", text)
+    return f"{'right' if m.group(2) == 'R' else 'left'} {m.group(1).strip()}" if m else text
+
+
+class KnowledgeBase:
+    """Evidence (question) and condition metadata.
+
+    With `binary_questions=True`, every multi-choice question (pain location, pain character, ...) is
+    replaced by one yes/no question per option, e.g. "Do you feel pain in the left cheek?". These
+    sub-evidences are named '<evidence>@<value>' and behave like binary evidences everywhere.
+    """
+
+    def __init__(self, data_dir: str = DATA_DIR, binary_questions: bool = False):
+        self.binary_questions = binary_questions
         with open(os.path.join(data_dir, "release_evidences.json")) as f:
             self.evidences = json.load(f)
         with open(os.path.join(data_dir, "release_conditions.json")) as f:
@@ -46,10 +67,46 @@ class KnowledgeBase:
 
         self.evidence_names = sorted(self.evidences, key=lambda e: int(e.split("_")[1]))
         self.question = {e: self.evidences[e]["question_en"] for e in self.evidence_names}
+        if binary_questions:
+            subs = []
+            for e, vals in self._occurring_multi_values(data_dir).items():
+                for v in vals:
+                    sub = f"{e}@{v}"
+                    self.question[sub] = LOCATION_QUESTIONS[e].format(_side(self.value_text(e, v)))
+                    subs.append(sub)
+                del self.question[e]
+            self.evidence_names = [e for e in self.evidence_names if self.dtype(e) != "M"] + subs
         self.question_to_evidence = {q: e for e, q in self.question.items()}
 
+    def _occurring_multi_values(self, data_dir: str) -> dict[str, list[str]]:
+        """Options of each multi-choice evidence that occur in training patients (cached)."""
+        path = os.path.join(data_dir, "multi_values.json")
+        if not os.path.exists(path):
+            occ = {e: set() for e in self.evidences if self.evidences[e]["data_type"] == "M"}
+            for p in load_patients("train", 200_000, 0, data_dir):
+                for e in occ:
+                    occ[e] |= p.evidences.get(e, set())
+            skip = {"nowhere", "NA"}
+            occ = {e: sorted(v for v in vals if v != str(self.evidences[e]["default_value"])
+                             and self.evidences[e]["value_meaning"][v]["en"] not in skip)
+                   for e, vals in occ.items()}
+            with open(path, "w") as f:
+                json.dump(occ, f, indent=1)
+        with open(path) as f:
+            return json.load(f)
+
     def dtype(self, e: str) -> str:
-        return self.evidences[e]["data_type"]
+        return "B" if "@" in e else self.evidences[e]["data_type"]
+
+    def positive_evidences(self, p: "Patient") -> set[str]:
+        """The patient's positive evidences, in this knowledge base's question space."""
+        out = set()
+        for e, v in p.evidences.items():
+            if isinstance(v, set) and self.binary_questions:
+                out |= {f"{e}@{x}" for x in v if f"{e}@{x}" in self.question}
+            else:
+                out.add(e)
+        return out
 
     def default(self, e: str) -> str:
         return str(self.evidences[e]["default_value"])
@@ -81,6 +138,9 @@ class Patient:
     def observation(self, kb: KnowledgeBase, e: str):
         """Ground-truth answer to evidence `e` (default value if the patient doesn't have it)."""
         t = kb.dtype(e)
+        if "@" in e:  # yes/no sub-question of a multi-choice evidence
+            base, v = e.split("@")
+            return v in self.evidences.get(base, ())
         if t == "B":
             return e in self.evidences
         if t == "C":

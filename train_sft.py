@@ -14,8 +14,8 @@ import torch
 from tqdm import tqdm
 from transformers import get_cosine_schedule_with_warmup
 
-from data import KnowledgeBase, load_patients
-from env import EnvConfig, EnvFactory
+from data import load_patients
+from env import add_env_args, build_env
 from llm import action_logprobs, collate, load_policy, load_tokenizer, tokenize_dialogue
 from rollout import evaluate
 
@@ -32,6 +32,7 @@ def main():
     ap.add_argument("--micro_batch", type=int, default=8)
     ap.add_argument("--lora_r", type=int, default=16)
     ap.add_argument("--grad_ckpt", action="store_true")
+    add_env_args(ap)  # must match the setting the SFT data was generated with
     ap.add_argument("--eval_n", type=int, default=200, help="validation patients evaluated at the end")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
@@ -79,8 +80,7 @@ def main():
     tok.save_pretrained(args.out)
 
     if args.eval_n:
-        kb = KnowledgeBase()
-        make_env = EnvFactory(kb, EnvConfig())
+        make_env = build_env(args)
         metrics = evaluate(model, tok, make_env, load_patients("validate", args.eval_n, 0),
                            out_path=os.path.join(args.out, "val_eval.json"))
         print("validation:", json.dumps(metrics))

@@ -2,11 +2,16 @@
 
 The doctor (policy) writes one message per turn: either a free-text question or a final
 "Diagnosis: <condition> (ICD-10: <code>)". Questions are mapped to the closest DDXPlus
-evidence question (exact match, else TF-IDF cosine); the simulated patient answers
+evidence question (exact match, else sentence-embedding cosine); the simulated patient answers
 deterministically from its ground-truth evidences. No LLM oracle is involved, so the
 environment is cheap and noise-free.
 
-Reward: +1 for a correct diagnosis (pathology / ICD-10 code), -question_cost per question.
+Settings:
+  binary_questions  multi-choice questions are split into yes/no questions per option
+  differential      the doctor gives a ranked differential of up to 3 conditions
+
+Reward: +1 for a correct (top-1) diagnosis, -question_cost per question. With
+ddx_reward_weight=w, the diagnosis reward is (1-w)*top1 + w*recall of the DDXPlus top-3 differential.
 """
 import re
 from dataclasses import dataclass, field
@@ -18,10 +23,15 @@ from data import KnowledgeBase, Patient
 
 SYSTEM_PROMPT = (
     "You are a doctor taking a patient's history. Each turn, ask the patient exactly one short "
-    "yes/no or short-answer question. Use as few questions as possible (at most {max_q}). "
-    "When you are confident, answer exactly in the form "
-    "'Diagnosis: <condition> (ICD-10: <code>)' using one of these conditions:\n{conditions}"
+    "{question_kind} question. Use as few questions as possible (at most {max_q}). "
+    "When you are confident, answer exactly in the form {diagnosis_format} using these conditions:\n{conditions}"
 )
+SINGLE_FORMAT = "'Diagnosis: <condition> (ICD-10: <code>)'"
+DIFFERENTIAL_FORMAT = (
+    "'Diagnosis: <most likely condition> (ICD-10: <code>); <second> (ICD-10: <code>); <third> (ICD-10: <code>)', "
+    "ranked from most to least likely,"
+)
+DIFFERENTIAL_K = 3
 MENU_PROMPT = "\n\nYou may ask any of these questions:\n{questions}"
 LIMIT_NOTE = " [You have reached the question limit. Give your diagnosis now.]"
 NOT_UNDERSTOOD = "Sorry, I don't understand the question."
@@ -74,7 +84,8 @@ class QuestionMatcher:
 
 
 class DiagnosisParser:
-    """Extracts a condition from 'Diagnosis: ...' text via ICD-10 code, else condition name."""
+    """Extracts the ranked list of conditions in a 'Diagnosis: ...' message, in order of
+    appearance, from ICD-10 codes or condition names."""
 
     def __init__(self, kb: KnowledgeBase):
         self.kb = kb
@@ -82,15 +93,23 @@ class DiagnosisParser:
         # longest names first so "Unstable angina" wins over "Stable angina"
         self.names = sorted(kb.conditions, key=len, reverse=True)
 
-    def __call__(self, text: str) -> str | None:
-        for code in re.findall(r"[A-Za-z]\d{2}(?:\.\d+)?", text):
-            if code.upper() in self.code_to_cond:
-                return self.code_to_cond[code.upper()]
+    def __call__(self, text: str) -> list[str]:
+        hits, taken = [], [False] * len(text)
+        for m in re.finditer(r"[A-Za-z]\d{2}(?:\.\d+)?", text):
+            if m.group().upper() in self.code_to_cond:
+                hits.append((m.start(), self.code_to_cond[m.group().upper()]))
+                taken[m.start():m.end()] = [True] * (m.end() - m.start())
         low = text.lower()
         for name in self.names:
-            if name.lower() in low:
-                return name
-        return None
+            for m in re.finditer(re.escape(name.lower()), low):
+                if not any(taken[m.start():m.end()]):
+                    hits.append((m.start(), name))
+                    taken[m.start():m.end()] = [True] * (m.end() - m.start())
+        ranked = []
+        for _, c in sorted(hits):
+            if c not in ranked:
+                ranked.append(c)
+        return ranked
 
 
 @dataclass
@@ -99,6 +118,9 @@ class EnvConfig:
     question_cost: float = 0.01
     match_threshold: float = 0.75
     question_menu: bool = False  # list every askable question in the system prompt (zero-shot)
+    binary_questions: bool = False  # split multi-choice questions into yes/no per option
+    differential: bool = False  # doctor gives a ranked differential (up to 3 conditions)
+    ddx_reward_weight: float = 0.0  # weight of differential recall in the diagnosis reward
 
 
 def intro_text(kb: KnowledgeBase, p: Patient) -> str:
@@ -120,10 +142,14 @@ class DDXEnv:
     asked: list = field(default_factory=list)  # matched evidence per question (None if unmatched)
     rewards: list = field(default_factory=list)  # one reward per doctor turn
     done: bool = False
-    prediction: str | None = None
+    ranking: list = field(default_factory=list)  # predicted conditions, most likely first
 
     def __post_init__(self):
-        system = SYSTEM_PROMPT.format(max_q=self.cfg.max_questions, conditions=self.kb.condition_list_text())
+        system = SYSTEM_PROMPT.format(
+            question_kind="yes/no" if self.cfg.binary_questions else "yes/no or short-answer",
+            max_q=self.cfg.max_questions,
+            diagnosis_format=DIFFERENTIAL_FORMAT if self.cfg.differential else SINGLE_FORMAT,
+            conditions=self.kb.condition_list_text())
         if self.cfg.question_menu:
             system += MENU_PROMPT.format(questions="\n".join(f"- {self.kb.question[e]}" for e in self.kb.evidence_names))
         self.messages = [
@@ -135,6 +161,15 @@ class DDXEnv:
     def n_questions(self) -> int:
         return len(self.asked)
 
+    @property
+    def prediction(self) -> str | None:
+        return self.ranking[0] if self.ranking else None
+
+    def ddx_recall(self) -> float:
+        """Fraction of the DDXPlus top-3 differential that appears in the predicted ranking."""
+        gold = [c for c, _ in sorted(self.patient.differential, key=lambda x: -x[1])[:DIFFERENTIAL_K]]
+        return len(set(gold) & set(self.ranking[:DIFFERENTIAL_K])) / max(len(gold), 1)
+
     def step(self, action: str) -> float:
         """Apply one doctor message; returns that turn's reward."""
         assert not self.done
@@ -142,9 +177,10 @@ class DDXEnv:
         self.messages.append({"role": "assistant", "content": action})
         forced = self.n_questions >= self.cfg.max_questions
         if forced or DIAG_RE.search(action):
-            self.prediction = self.parser(action)
+            self.ranking = self.parser(action)[: DIFFERENTIAL_K if self.cfg.differential else 1]
             self.done = True
-            reward = float(self.prediction == self.patient.pathology)
+            w = self.cfg.ddx_reward_weight
+            reward = (1 - w) * float(self.prediction == self.patient.pathology) + w * self.ddx_recall()
         else:
             evidence, _ = self.matcher(action) if action else (None, 0.0)
             self.asked.append(evidence)
@@ -157,14 +193,19 @@ class DDXEnv:
         return reward
 
     def summary(self) -> dict:
-        positives = set(self.patient.evidences) - {self.patient.initial_evidence}
+        positives = self.kb.positive_evidences(self.patient) - {self.patient.initial_evidence}
         asked = {e for e in self.asked if e}
+        gold_ddx = {c for c, _ in self.patient.differential}
         return {
             "pathology": self.patient.pathology,
             "icd10": self.kb.icd_label[self.patient.pathology],
             "prediction": self.prediction,
+            "ranking": self.ranking,
             "correct": self.prediction == self.patient.pathology,
-            "in_differential": self.prediction in {c for c, _ in self.patient.differential},
+            "top3": self.patient.pathology in self.ranking[:3],
+            "in_differential": self.prediction in gold_ddx,
+            "ddx_precision": len(set(self.ranking) & gold_ddx) / max(len(self.ranking), 1),
+            "ddx_recall": self.ddx_recall(),
             "n_questions": self.n_questions,
             "n_unmatched": sum(e is None for e in self.asked),
             "n_repeated": len(self.asked) - len(set(self.asked)),
@@ -185,8 +226,31 @@ class EnvFactory:
         return DDXEnv(self.kb, patient, self.cfg, self.matcher, self.parser)
 
 
+def add_env_args(ap):
+    """Environment flags shared by every script."""
+    ap.add_argument("--max_questions", type=int, default=20)
+    ap.add_argument("--question_cost", type=float, default=0.01)
+    ap.add_argument("--binary_questions", action="store_true", help="only yes/no questions (split multi-choice)")
+    ap.add_argument("--differential", action="store_true", help="ranked differential of up to 3 conditions")
+    ap.add_argument("--ddx_reward_weight", type=float, default=0.0)
+
+
+def setting_tag(args) -> str:
+    """File-name suffix for the environment setting, e.g. '_binary_ddx'."""
+    return ("_binary" if args.binary_questions else "") + ("_ddx" if args.differential else "")
+
+
+def build_env(args, question_menu: bool = False) -> EnvFactory:
+    kb = KnowledgeBase(binary_questions=args.binary_questions)
+    cfg = EnvConfig(max_questions=args.max_questions, question_cost=args.question_cost, question_menu=question_menu,
+                    binary_questions=args.binary_questions, differential=args.differential,
+                    ddx_reward_weight=args.ddx_reward_weight)
+    return EnvFactory(kb, cfg)
+
+
 def aggregate(summaries: list[dict]) -> dict:
-    keys = ["correct", "in_differential", "n_questions", "n_unmatched", "n_repeated", "evidence_recall", "return"]
+    keys = ["correct", "top3", "in_differential", "ddx_precision", "ddx_recall", "n_questions", "n_unmatched",
+            "n_repeated", "evidence_recall", "return"]
     out = {k: float(np.mean([s[k] for s in summaries])) for k in keys}
     out["accuracy"] = out.pop("correct")
     out["n"] = len(summaries)
