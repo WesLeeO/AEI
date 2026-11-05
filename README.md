@@ -30,7 +30,7 @@ to be correct while asking as few questions as possible.
 ```
 
 ```math
-\text{GRPO:}\quad A_i = \frac{R_i - \operatorname{mean}(R_{1:G})}{\operatorname{std}(R_{1:G})}
+\text{GRPO:}\quad A_i = \frac{R_i - \mathrm{mean}(R_{1:G})}{\mathrm{std}(R_{1:G})}
 ```
 
 Patient and prompt tokens are masked out of every loss. RL starts from the SFT adapter, which is also the KL reference.
