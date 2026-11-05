@@ -1,0 +1,1417 @@
+{
+  "metrics": {
+    "top3": 0.874,
+    "in_differential": 0.882,
+    "ddx_precision": 0.5293333333333332,
+    "ddx_recall": 0.43999999999999995,
+    "n_questions": 4.892,
+    "n_unmatched": 0.0,
+    "n_repeated": 0.058,
+    "evidence_recall": 0.08732998267064583,
+    "return": 0.73508,
+    "accuracy": 0.784,
+    "n": 500
+  },
+  "examples": [
+    {
+      "summary": {
+        "pathology": "Atrial fibrillation",
+        "icd10": "I48.91",
+        "prediction": "Atrial fibrillation",
+        "ranking": [
+          "Atrial fibrillation",
+          "PSVT",
+          "Myocarditis"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 1.0,
+        "n_questions": 4,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 0.96
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 23-year-old woman. Reason for consultation: when asked \"Do you feel your heart is beating fast (racing), irregularly (missing a beat) or do you feel palpitations?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "How precisely is the pain located?"
+        },
+        {
+          "role": "user",
+          "content": "0 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have any lesions, redness or problems on your skin that you believe are related to the condition you are consulting for?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you regularly take stimulant drugs?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel anxious?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Atrial fibrillation (ICD-10: I48.91); PSVT (ICD-10: I47.1); Myocarditis (ICD-10: I51.4)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Cluster headache",
+        "icd10": "G44.009",
+        "prediction": "Cluster headache",
+        "ranking": [
+          "Cluster headache",
+          "Acute COPD exacerbation / infection",
+          "Pulmonary neoplasm"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.3333333333333333,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 0,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 1.0
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 62-year-old woman. Reason for consultation: when asked \"Do you feel that your eyes produce excessive tears?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Cluster headache (ICD-10: G44.009); Acute COPD exacerbation / infection (ICD-10: J44.1); Pulmonary neoplasm (ICD-10: C34)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Acute dystonic reactions",
+        "icd10": "G24.02",
+        "prediction": "Acute dystonic reactions",
+        "ranking": [
+          "Acute dystonic reactions",
+          "Croup",
+          "Epiglottitis"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.3333333333333333,
+        "ddx_recall": 1.0,
+        "n_questions": 0,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 1.0
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 13-year-old woman. Reason for consultation: when asked \"Have you ever felt like you were suffocating for a very short time associated with inability to breathe or speak?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Acute dystonic reactions (ICD-10: G24.02); Croup (ICD-10: J05.0); Epiglottitis (ICD-10: J05.1)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "URTI",
+        "icd10": "J06.9",
+        "prediction": "URTI",
+        "ranking": [
+          "URTI",
+          "Bronchitis",
+          "Influenza"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 1.0,
+        "n_questions": 2,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 0.98
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 50-year-old man. Reason for consultation: when asked \"Do you have a sore throat?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a chronic obstructive pulmonary disease (COPD)?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: URTI (ICD-10: J06.9); Bronchitis (ICD-10: J40); Influenza (ICD-10: J11.1)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "GERD",
+        "icd10": "K21",
+        "prediction": "GERD",
+        "ranking": [
+          "GERD",
+          "Sarcoidosis",
+          "Chagas"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.3333333333333333,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 8,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.15,
+        "return": 0.92
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 36-year-old woman. Reason for consultation: when asked \"Do you have pain somewhere, related to your reason for consulting?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "How fast did the pain appear?"
+        },
+        {
+          "role": "user",
+          "content": "0 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as burning?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you been in contact with a person with similar symptoms in the past 2 weeks?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have polyps in your nose?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you noticed that the tone of your voice has become deeper, softer or hoarse?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a chronic obstructive pulmonary disease (COPD)?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the epigastric?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: GERD (ICD-10: K21); Sarcoidosis (ICD-10: D86); Chagas (ICD-10: B57)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Unstable angina",
+        "icd10": "I20.0",
+        "prediction": "Unstable angina",
+        "ranking": [
+          "Unstable angina",
+          "Stable angina",
+          "Possible NSTEMI / STEMI"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 10,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.14285714285714285,
+        "return": 0.9
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 22-year-old man. Reason for consultation: when asked \"Do you have pain somewhere, related to your reason for consulting?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "How fast did the pain appear?"
+        },
+        {
+          "role": "user",
+          "content": "6 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have swelling in one or more areas of your body?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as a knife stroke?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you ever had a heart attack or do you have angina (chest pain)?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as scary?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you find that your symptoms have worsened over the last 2 weeks and that progressively less effort is required to cause the symptoms?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as sharp?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have chest pain even at rest?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Are you experiencing shortness of breath or difficulty breathing in a significant way?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Unstable angina (ICD-10: I20.0); Stable angina (ICD-10: I20.9); Possible NSTEMI / STEMI (ICD-10: I21)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Pulmonary neoplasm",
+        "icd10": "C34",
+        "prediction": "Pulmonary neoplasm",
+        "ranking": [
+          "Pulmonary neoplasm",
+          "Pulmonary embolism",
+          "Pneumonia"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.6666666666666666,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 5,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.07142857142857142,
+        "return": 0.95
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 34-year-old woman. Reason for consultation: when asked \"Have you been coughing up blood?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "How intense is the pain?"
+        },
+        {
+          "role": "user",
+          "content": "2 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you had surgery within the last month?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as burning?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a sore throat?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Pulmonary neoplasm (ICD-10: C34); Pulmonary embolism (ICD-10: I26); Pneumonia (ICD-10: J17/J18)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Bronchiectasis",
+        "icd10": "J47",
+        "prediction": "Bronchiectasis",
+        "ranking": [
+          "Bronchiectasis",
+          "Acute COPD exacerbation / infection",
+          "Pneumonia"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 5,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.3333333333333333,
+        "return": 0.95
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 35-year-old man. Reason for consultation: when asked \"Are you experiencing shortness of breath or difficulty breathing in a significant way?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "How intense is the pain?"
+        },
+        {
+          "role": "user",
+          "content": "0 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a cough?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you noticed a wheezing sound when you exhale?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a cough that produces colored or more abundant sputum than usual?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you smoke cigarettes?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Bronchiectasis (ICD-10: J47); Acute COPD exacerbation / infection (ICD-10: J44.1); Pneumonia (ICD-10: J17/J18)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Bronchiectasis",
+        "icd10": "J47",
+        "prediction": "Bronchiectasis",
+        "ranking": [
+          "Bronchiectasis",
+          "Pneumonia",
+          "Acute COPD exacerbation / infection"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 3,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 0.97
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 35-year-old man. Reason for consultation: when asked \"Do you have a cough that produces colored or more abundant sputum than usual?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "How intense is the pain?"
+        },
+        {
+          "role": "user",
+          "content": "0 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you noticed a wheezing sound when you exhale?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you ever been diagnosed with gastroesophageal reflux?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Bronchiectasis (ICD-10: J47); Pneumonia (ICD-10: J17/J18); Acute COPD exacerbation / infection (ICD-10: J44.1)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Pericarditis",
+        "icd10": "I30",
+        "prediction": "Pericarditis",
+        "ranking": [
+          "Pericarditis",
+          "GERD",
+          "Myocarditis"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 2,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0625,
+        "return": 0.98
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 10-year-old woman. Reason for consultation: when asked \"Are your symptoms worse when lying down and alleviated while sitting up?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have swelling in one or more areas of your body?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you ever had a pericarditis?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Pericarditis (ICD-10: I30); GERD (ICD-10: K21); Myocarditis (ICD-10: I51.4)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Influenza",
+        "icd10": "J11.1",
+        "prediction": "URTI",
+        "ranking": [
+          "URTI",
+          "Bronchitis",
+          "Chagas"
+        ],
+        "correct": false,
+        "top3": false,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 12,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.16666666666666666,
+        "return": -0.12
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 29-year-old woman. Reason for consultation: when asked \"Do you have a cough?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "How precisely is the pain located?"
+        },
+        {
+          "role": "user",
+          "content": "8 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have polyps in your nose?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you been in contact with a person with similar symptoms in the past 2 weeks?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as burning?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the right ear?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have nasal congestion or a clear runny nose?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have greenish or yellowish nasal discharge?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a chronic obstructive pulmonary disease (COPD)?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you smoke cigarettes?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Are there members of your family who have been diagnosed with pancreatic cancer?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a sore throat?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: URTI (ICD-10: J06.9); Bronchitis (ICD-10: J40); Chagas (ICD-10: B57)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Epiglottitis",
+        "icd10": "J05.1",
+        "prediction": "Acute laryngitis",
+        "ranking": [
+          "Acute laryngitis",
+          "GERD",
+          "Viral pharyngitis"
+        ],
+        "correct": false,
+        "top3": false,
+        "in_differential": false,
+        "ddx_precision": 0.3333333333333333,
+        "ddx_recall": 0.0,
+        "n_questions": 16,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.2777777777777778,
+        "return": -0.16
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 40-year-old man. Reason for consultation: when asked \"Do you have pain somewhere, related to your reason for consulting?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "How fast did the pain appear?"
+        },
+        {
+          "role": "user",
+          "content": "4 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as burning?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have swelling in one or more areas of your body?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "How intense is the pain?"
+        },
+        {
+          "role": "user",
+          "content": "6 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Are you taking any new oral anticoagulants ((NOACs)?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you ever had a heart attack or do you have angina (chest pain)?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have nasal congestion or a clear runny nose?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "How precisely is the pain located?"
+        },
+        {
+          "role": "user",
+          "content": "9 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the right ear?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you smoke cigarettes?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the palace?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you noticed that the tone of your voice has become deeper, softer or hoarse?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the left ear?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the epigastric?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the right tonsil?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Acute laryngitis (ICD-10: J04.0); GERD (ICD-10: K21); Viral pharyngitis (ICD-10: J02.9)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Guillain-Barr\u00e9 syndrome",
+        "icd10": "G61.0",
+        "prediction": "Guillain-Barr\u00e9 syndrome",
+        "ranking": [
+          "Guillain-Barr\u00e9 syndrome",
+          "Myasthenia gravis",
+          "Croup"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.6666666666666666,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 2,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 0.98
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 8-year-old woman. Reason for consultation: when asked \"Do you feel weakness in both arms and/or both legs?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have difficulty swallowing, or have a feeling of discomfort/blockage when swallowing?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have difficulty articulating words/speaking?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Guillain-Barr\u00e9 syndrome (ICD-10: G61.0); Myasthenia gravis (ICD-10: G70.0); Croup (ICD-10: J05.0)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Bronchitis",
+        "icd10": "J40",
+        "prediction": "Bronchitis",
+        "ranking": [
+          "Bronchitis",
+          "GERD",
+          "Acute rhinosinusitis"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.6666666666666666,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 5,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.1875,
+        "return": 0.95
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 45-year-old woman. Reason for consultation: when asked \"Do you have a cough?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "How precisely is the pain located?"
+        },
+        {
+          "role": "user",
+          "content": "6 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as burning?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have polyps in your nose?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you been in contact with a person with similar symptoms in the past 2 weeks?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a chronic obstructive pulmonary disease (COPD)?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Bronchitis (ICD-10: J40); GERD (ICD-10: K21); Acute rhinosinusitis (ICD-10: J01)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Unstable angina",
+        "icd10": "I20.0",
+        "prediction": "Unstable angina",
+        "ranking": [
+          "Unstable angina",
+          "Possible NSTEMI / STEMI",
+          "Stable angina"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 1.0,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 6,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.06896551724137931,
+        "return": 0.94
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 42-year-old man. Reason for consultation: when asked \"Are you feeling nauseous or do you feel like vomiting?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you ever had a heart attack or do you have angina (chest pain)?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as scary?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you find that your symptoms have worsened over the last 2 weeks and that progressively less effort is required to cause the symptoms?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as sharp?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have chest pain even at rest?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Unstable angina (ICD-10: I20.0); Possible NSTEMI / STEMI (ICD-10: I21); Stable angina (ICD-10: I20.9)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Pancreatic neoplasm",
+        "icd10": "C25",
+        "prediction": "Pancreatic neoplasm",
+        "ranking": [
+          "Pancreatic neoplasm",
+          "Pulmonary neoplasm",
+          "Tuberculosis"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.3333333333333333,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 1,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.043478260869565216,
+        "return": 0.99
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 28-year-old man. Reason for consultation: when asked \"Have you had an involuntary weight loss over the last 3 months?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Yellow."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Pancreatic neoplasm (ICD-10: C25); Pulmonary neoplasm (ICD-10: C34); Tuberculosis (ICD-10: A15)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Bronchiectasis",
+        "icd10": "J47",
+        "prediction": "Bronchiectasis",
+        "ranking": [
+          "Bronchiectasis",
+          "Pneumonia",
+          "Acute COPD exacerbation / infection"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.6666666666666666,
+        "ddx_recall": 0.6666666666666666,
+        "n_questions": 3,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 0.97
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 40-year-old man. Reason for consultation: when asked \"Do you have a cough that produces colored or more abundant sputum than usual?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "How intense is the pain?"
+        },
+        {
+          "role": "user",
+          "content": "0 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you noticed a wheezing sound when you exhale?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you ever been diagnosed with gastroesophageal reflux?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Bronchiectasis (ICD-10: J47); Pneumonia (ICD-10: J17/J18); Acute COPD exacerbation / infection (ICD-10: J44.1)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Guillain-Barr\u00e9 syndrome",
+        "icd10": "G61.0",
+        "prediction": "Guillain-Barr\u00e9 syndrome",
+        "ranking": [
+          "Guillain-Barr\u00e9 syndrome",
+          "Myasthenia gravis",
+          "Ebola"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.3333333333333333,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 2,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 0.98
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 55-year-old man. Reason for consultation: when asked \"Do you feel weakness in both arms and/or both legs?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have difficulty swallowing, or have a feeling of discomfort/blockage when swallowing?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have difficulty articulating words/speaking?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Guillain-Barr\u00e9 syndrome (ICD-10: G61.0); Myasthenia gravis (ICD-10: G70.0); Ebola (ICD-10: A98.4)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Anemia",
+        "icd10": "D64.9",
+        "prediction": "Anemia",
+        "ranking": [
+          "Anemia",
+          "Epiglottitis",
+          "Boerhaave"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.3333333333333333,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 0,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.0,
+        "return": 1.0
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 26-year-old man. Reason for consultation: when asked \"Have you noticed light red blood or blood clots in your stool?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Anemia (ICD-10: D64.9); Epiglottitis (ICD-10: J05.1); Boerhaave (ICD-10: K22.3)"
+        }
+      ]
+    },
+    {
+      "summary": {
+        "pathology": "Acute otitis media",
+        "icd10": "H66.90",
+        "prediction": "Acute otitis media",
+        "ranking": [
+          "Acute otitis media",
+          "Chagas",
+          "Viral pharyngitis"
+        ],
+        "correct": true,
+        "top3": true,
+        "in_differential": true,
+        "ddx_precision": 0.6666666666666666,
+        "ddx_recall": 0.3333333333333333,
+        "n_questions": 9,
+        "n_unmatched": 0,
+        "n_repeated": 0,
+        "evidence_recall": 0.3,
+        "return": 0.91
+      },
+      "dialogue": [
+        {
+          "role": "user",
+          "content": "Patient: 4-year-old woman. Reason for consultation: when asked \"Do you have pain somewhere, related to your reason for consulting?\" the patient answered yes."
+        },
+        {
+          "role": "assistant",
+          "content": "What color is the rash?"
+        },
+        {
+          "role": "user",
+          "content": "Not applicable."
+        },
+        {
+          "role": "assistant",
+          "content": "Would you describe your pain as burning?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have swelling in one or more areas of your body?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "How intense is the pain?"
+        },
+        {
+          "role": "user",
+          "content": "6 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Are you taking any new oral anticoagulants ((NOACs)?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you have a sore throat?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "How precisely is the pain located?"
+        },
+        {
+          "role": "user",
+          "content": "9 (on a scale from 0 to 10)."
+        },
+        {
+          "role": "assistant",
+          "content": "Have you been in contact with a person with similar symptoms in the past 2 weeks?"
+        },
+        {
+          "role": "user",
+          "content": "No."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you feel pain in the right ear?"
+        },
+        {
+          "role": "user",
+          "content": "Yes."
+        },
+        {
+          "role": "assistant",
+          "content": "Diagnosis: Acute otitis media (ICD-10: H66.90); Chagas (ICD-10: B57); Viral pharyngitis (ICD-10: J02.9)"
+        }
+      ]
+    }
+  ]
+}
